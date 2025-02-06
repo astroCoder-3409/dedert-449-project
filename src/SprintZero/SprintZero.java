@@ -16,7 +16,6 @@ class GameBoard extends JPanel {
 }
 
 public class SprintZero {
-    // Main driver method
     public static void main(String[] args)
     {
         JFrame frame = new JFrame();
@@ -24,10 +23,16 @@ public class SprintZero {
         JLabel text = new JLabel( "^^^^^ Click Above ^^^^^", JLabel.CENTER);
         GameBoard panel = new GameBoard();
         JCheckBox checkbox = new JCheckBox("Test Checkbox");
+        JRadioButton rButton1 = new JRadioButton("Option 1");
+        JRadioButton rButton2 = new JRadioButton("Option 2");
         button.setBounds(150, 40, 220, 50);
+        rButton1.setBounds(150, 300, 220, 30);
+        rButton2.setBounds(150, 330, 220, 30);
         text.setBounds(150, 100, 220, 10);
         checkbox.setBounds(150, 120, 220, 20);
         panel.add(button);
+        panel.add(rButton1);
+        panel.add(rButton2);
         panel.add(text);
         panel.add(checkbox);
         frame.setSize(500, 600);
