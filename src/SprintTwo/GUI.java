@@ -41,7 +41,7 @@ public class GUI extends JFrame {
     private JButton startGameButton;
     private Board board;
 
-    private int updateBoardSize(int size) {
+    private void updateBoardSize(int size) {
         if (size >= 3 && size <= MAX_BOARD_SIZE)
         {
             board.resetBoard(size);
@@ -49,11 +49,10 @@ public class GUI extends JFrame {
             adjustedBoardDimensions = cellSize * board.getBoardSize();
             cellPadding = cellSize / 6;
             symbolSize = cellSize - cellPadding * 2;
-            return 0;
         }
         else
         {
-            return -1;
+            throw new NumberFormatException("Size out of bounds!");
         }
     }
 
