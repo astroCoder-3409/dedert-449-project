@@ -58,6 +58,7 @@ public class GeneralGame extends AbstractGame {
             if (areThereNewSOSs) {
                 isGameOver(row, column);
             } else {
+                isGameOver(row, column);
                 turn = (turn == "Red") ? "Blue" : "Red";
             }
         }
