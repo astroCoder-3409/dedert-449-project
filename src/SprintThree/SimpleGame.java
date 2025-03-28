@@ -36,9 +36,9 @@ public class SimpleGame extends AbstractGame {
     public boolean makeMove(int row, int column, boolean isS) {
         boolean success = super.makeMove(row, column, isS);
         if (success) {
-            turn = (turn == "Red") ? "Blue" : "Red";
             findNewSOSs(row, column);
             isGameOver(row, column);
+            turn = (turn == "Red") ? "Blue" : "Red";
         }
         return success;
     }
