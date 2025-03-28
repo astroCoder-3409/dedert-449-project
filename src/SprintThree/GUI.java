@@ -40,14 +40,20 @@ public class GUI extends JFrame {
     private JRadioButton simpleGameButton;
     private JRadioButton generalGameButton;
     private JButton startGameButton;
-    private Board board;
+    private JLabel blueScoreLabel;
+    private JLabel redScoreLabel;
+    private AbstractGame game;
 
-    private void updateBoardSize(int size) {
+    private void startGame(int size, int mode) {
         if (size >= 3 && size <= MAX_BOARD_SIZE)
         {
-            board.resetBoard(size);
-            cellSize = BOARD_DIMENSIONS / board.getBoardSize();
-            adjustedBoardDimensions = cellSize * board.getBoardSize();
+            if (mode == 1) {
+                game = new SimpleGame(size);
+            } else {
+                game = new GeneralGame(size);
+            }
+            cellSize = BOARD_DIMENSIONS / game.getBoardSize();
+            adjustedBoardDimensions = cellSize * game.getBoardSize();
             cellPadding = cellSize / 6;
             symbolSize = cellSize - cellPadding * 2;
         }
@@ -57,8 +63,8 @@ public class GUI extends JFrame {
         }
     }
 
-    public GUI(Board board) {
-        this.board = board;
+    public GUI(AbstractGame game) {
+        this.game = game;
         setContentPane();
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(700, 600));
@@ -67,8 +73,9 @@ public class GUI extends JFrame {
         setVisible(true);
     }
 
-    public Board getBoard(){
-        return board;
+    //note to grader -- this is bad practice, but makes the GUI far more testable with Junit.
+    public AbstractGame getGame() {
+        return game;
     }
 
     private void setContentPane(){
@@ -95,27 +102,6 @@ public class GUI extends JFrame {
         gameModeButtonGroup.add(simpleGameButton);
         gameModeButtonGroup.add(generalGameButton);
 
-        startGameButton = new JButton("Start Game!");
-        startGameButton.setSize(120, 20);
-        startGameButton.setLocation(X_OFFSET + (int) (BOARD_DIMENSIONS * 0.65), 20);
-        startGameButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (simpleGameButton.isSelected()) {
-                    board.setGameModeSimple();
-                } else {
-                    board.setGameModeGeneral();
-                }
-                try {
-                    updateBoardSize(Integer.parseInt(boardSizeInput.getText()));
-                } catch (NumberFormatException ex) {
-                    updateBoardSize(DEFAULT_BOARD_SIZE);
-                    boardSizeInput.setText(Integer.toString(DEFAULT_BOARD_SIZE));
-                    JOptionPane.showMessageDialog(gameBoardCanvas, "invalid board size!");
-                }
-                repaint();
-            }
-        });
         redPlayerLabel = new JLabel("Red Player: ");
         redPlayerLabel.setSize(150, 20);
         redPlayerLabel.setLocation(BOARD_DIMENSIONS + X_OFFSET + 50, Y_OFFSET);
@@ -127,6 +113,11 @@ public class GUI extends JFrame {
         redPlayerOButton = new JRadioButton("O");
         redPlayerOButton.setSize(50, 20);
         redPlayerOButton.setLocation(BOARD_DIMENSIONS + X_OFFSET + 50, Y_OFFSET + 50);
+
+        redScoreLabel = new JLabel("Red Score: 0");
+        redScoreLabel.setSize(150, 20);
+        redScoreLabel.setLocation(BOARD_DIMENSIONS + X_OFFSET + 50, Y_OFFSET + 100);
+        redScoreLabel.setVisible(false);
 
         bluePlayerLabel = new JLabel("Blue Player: ");
         bluePlayerLabel.setSize(150, 20);
@@ -140,7 +131,12 @@ public class GUI extends JFrame {
         bluePlayerOButton.setSize(50, 20);
         bluePlayerOButton.setLocation(20, Y_OFFSET + 50);
 
-        turnLabel = new JLabel("Current Turn: " + board.getTurn());
+        blueScoreLabel = new JLabel("Blue Score: 0");
+        blueScoreLabel.setSize(150, 20);
+        blueScoreLabel.setLocation(20, Y_OFFSET + 100);
+        blueScoreLabel.setVisible(false);
+
+        turnLabel = new JLabel("Current Turn: " + game.getTurn());
         turnLabel.setSize(200, 20);
         turnLabel.setLocation(X_OFFSET, Y_OFFSET + BOARD_DIMENSIONS + 10);
 
@@ -151,6 +147,30 @@ public class GUI extends JFrame {
         bluePlayerSOSButtonGroup = new ButtonGroup();
         bluePlayerSOSButtonGroup.add(bluePlayerSButton);
         bluePlayerSOSButtonGroup.add(bluePlayerOButton);
+
+        startGameButton = new JButton("Start Game!");
+        startGameButton.setSize(120, 20);
+        startGameButton.setLocation(X_OFFSET + (int) (BOARD_DIMENSIONS * 0.65), 20);
+        startGameButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    startGame(Integer.parseInt(boardSizeInput.getText()), simpleGameButton.isSelected() ? 1 : 2);
+                } catch (NumberFormatException ex) {
+                    startGame(DEFAULT_BOARD_SIZE, simpleGameButton.isSelected() ? 1 : 2);
+                    boardSizeInput.setText(Integer.toString(DEFAULT_BOARD_SIZE));
+                    JOptionPane.showMessageDialog(gameBoardCanvas, "invalid board size!");
+                }
+                if (game.getGameMode() == "Simple") {
+                    blueScoreLabel.setVisible(false);
+                    redScoreLabel.setVisible(false);
+                } else {
+                    blueScoreLabel.setVisible(true);
+                    redScoreLabel.setVisible(true);
+                }
+                repaint();
+            }
+        });
 
         gameBoardCanvas = new GameBoardCanvas();
         gameBoardCanvas.setSize(new Dimension(BOARD_DIMENSIONS+GRID_WIDTH, BOARD_DIMENSIONS+GRID_WIDTH));
@@ -172,6 +192,8 @@ public class GUI extends JFrame {
         contentPane.add(generalGameButton);
         contentPane.add(startGameButton);
         contentPane.add(turnLabel);
+        contentPane.add(blueScoreLabel);
+        contentPane.add(redScoreLabel);
     }
 
     class GameBoardCanvas extends JPanel {
@@ -181,8 +203,22 @@ public class GUI extends JFrame {
                 public void mouseClicked(MouseEvent e) {
                     int rowSelected = e.getY() / cellSize;
                     int colSelected = e.getX() / cellSize;
-                    boolean isS = board.getTurn() == "Blue" ? bluePlayerSButton.isSelected() : redPlayerSButton.isSelected();
-                    board.makeMove(rowSelected, colSelected, isS);
+                    boolean isS = game.getTurn() == "Blue" ? bluePlayerSButton.isSelected() : redPlayerSButton.isSelected();
+                    boolean success = game.makeMove(rowSelected, colSelected, isS);
+                    repaint();
+                    if (success && game.getGameState() != GameState.ACTIVE) {
+                        switch (game.getGameState()) {
+                            case BLUE_WON:
+                                JOptionPane.showMessageDialog(gameBoardCanvas, "Blue won!");
+                                break;
+                            case RED_WON:
+                                JOptionPane.showMessageDialog(gameBoardCanvas, "Red won!");
+                                break;
+                            case DRAW:
+                                JOptionPane.showMessageDialog(gameBoardCanvas, "Draw");
+                                break;
+                        }
+                    }
                     repaint();
                 }
             });
@@ -197,12 +233,12 @@ public class GUI extends JFrame {
 
         private void drawGridLines(Graphics g){
             g.setColor(Color.LIGHT_GRAY);
-            for (int row = 0; row <= board.getBoardSize(); row++) {
+            for (int row = 0; row <= game.getBoardSize(); row++) {
                 g.fillRect(0, cellSize * row,
                         adjustedBoardDimensions+GRID_WIDTH_HALF, GRID_WIDTH);
             }
 
-            for (int col = 0; col <= board.getBoardSize(); col++) {
+            for (int col = 0; col <= game.getBoardSize(); col++) {
                 g.fillRect(cellSize * col,0,
                         GRID_WIDTH, adjustedBoardDimensions+GRID_WIDTH_HALF);
             }
@@ -211,9 +247,16 @@ public class GUI extends JFrame {
         private void drawBoard(Graphics g){
             Graphics2D g2d = (Graphics2D)g;
             g2d.setStroke(new BasicStroke(SYMBOL_STROKE_WIDTH, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            turnLabel.setForeground(board.getTurn() == "Blue" ? Color.BLUE : Color.RED);
-            turnLabel.setText("Current Turn: " + board.getTurn());
-            for (SOSRecord SOS : board.getSOSList()) {
+            turnLabel.setForeground(game.getTurn() == "Blue" ? Color.BLUE : Color.RED);
+            turnLabel.setText("Current Turn: " + game.getTurn());
+            if (game.getGameMode() == "General") {
+                blueScoreLabel.setForeground(Color.BLUE);
+                blueScoreLabel.setText("Blue Score: " + ((GeneralGame) game).getBlueScore());
+                redScoreLabel.setForeground(Color.RED);
+                redScoreLabel.setText("Red Score: " + ((GeneralGame) game).getRedScore());
+            }
+
+            for (SOSRecord SOS : game.getSOSList()) {
                 int x1 = SOS.coordinateStart[1] * cellSize + cellSize/2  + GRID_WIDTH_HALF;
                 int y1 = SOS.coordinateStart[0] * cellSize + cellSize/2  + GRID_WIDTH_HALF;
                 int x2 = SOS.coordinateEnd[1] * cellSize + cellSize/2  + GRID_WIDTH_HALF;
@@ -221,15 +264,15 @@ public class GUI extends JFrame {
                 g2d.setColor(SOS.color == "Blue" ? Color.BLUE : Color.RED);
                 g2d.drawLine(x1, y1, x2, y2);
             }
-            for (int row = 0; row < board.getBoardSize(); row++) {
-                for (int col = 0; col < board.getBoardSize(); col++) {
+            for (int row = 0; row < game.getBoardSize(); row++) {
+                for (int col = 0; col < game.getBoardSize(); col++) {
                     int x1 = col * cellSize + cellPadding + GRID_WIDTH_HALF;
                     int y1 = row * cellSize + cellPadding + GRID_WIDTH_HALF;
-                    if (board.getCell(row,col) == 1) {
+                    if (game.getCell(row,col) == 1) {
                         g2d.setColor(Color.BLACK);
                         g2d.setFont(new Font("Arial", Font.PLAIN, (int) (cellSize / 1.2)));
                         g2d.drawString("S", x1 + (int) (cellSize * 0.09), y1 + (int) (cellSize * 0.64));
-                    } else if (board.getCell(row,col) == 2) {
+                    } else if (game.getCell(row,col) == 2) {
                         g2d.setColor(Color.BLACK);
                         g2d.setFont(new Font("Arial", Font.PLAIN, (int) (cellSize / 1.2)));
                         g2d.drawString("O", x1 + (int) (cellSize * 0.05), y1 + (int) (cellSize * 0.64));
@@ -237,13 +280,12 @@ public class GUI extends JFrame {
                 }
             }
         }
-
     }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                new GUI(new Board(DEFAULT_BOARD_SIZE));
+                new GUI(new SimpleGame(DEFAULT_BOARD_SIZE));
             }
         });
     }

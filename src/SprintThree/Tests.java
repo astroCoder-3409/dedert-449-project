@@ -16,13 +16,13 @@ import static org.junit.jupiter.api.Assertions.*;
 class GUITests {
 
     private GUI gui;
-    private Board board;
+    private AbstractGame game;
 
     @BeforeEach
     void setUp() throws Exception {
         // Create a new Board with the default size and start the GUI on the EDT.
-        board = new Board(GUI.DEFAULT_BOARD_SIZE);
-        SwingUtilities.invokeAndWait(() -> gui = new GUI(board));
+        game = new SimpleGame(GUI.DEFAULT_BOARD_SIZE);
+        SwingUtilities.invokeAndWait(() -> gui = new GUI(game));
     }
 
     @AfterEach
@@ -46,8 +46,9 @@ class GUITests {
         JButton startGameButton = (JButton) startGameButtonField.get(gui);
         SwingUtilities.invokeAndWait(startGameButton::doClick);
 
+        game = gui.getGame();
         // Verify that the Board's size is updated to 15.
-        assertEquals(15, board.getBoardSize(), "Board size should be updated to 15 for valid input.");
+        assertEquals(15, game.getBoardSize(), "Board size should be updated to 15 for valid input.");
         // Also, the board size input field should still display "15".
         assertEquals("15", boardSizeInput.getText(), "Board size input field should display '15'.");
     }
@@ -116,7 +117,7 @@ class GUITests {
         SwingUtilities.invokeAndWait(startGameButton::doClick);
 
         // After the button click, the board should have been reset to the default size.
-        assertEquals(10, board.getBoardSize(), "Board size should reset to default (10) for invalid input.");
+        assertEquals(10, game.getBoardSize(), "Board size should reset to default (10) for invalid input.");
 
         // Also, the boardSizeInput text should have been reset to the default value.
         boardSizeInput = (JTextField) boardSizeInputField.get(gui);
@@ -140,7 +141,7 @@ class GUITests {
         SwingUtilities.invokeAndWait(startGameButton::doClick);
 
         // Verify that the game mode is set to Simple.
-        assertEquals("Simple", board.getGameMode(), "Game mode should be 'Simple' when Simple is selected.");
+        assertEquals("Simple", game.getGameMode(), "Game mode should be 'Simple' when Simple is selected.");
     }
 
     // AC 2.1 <Update game mode game start> - General mode
@@ -157,9 +158,10 @@ class GUITests {
         startGameButtonField.setAccessible(true);
         JButton startGameButton = (JButton) startGameButtonField.get(gui);
         SwingUtilities.invokeAndWait(startGameButton::doClick);
+        game = gui.getGame();
 
         // Verify that the game mode is set to General.
-        assertEquals("General", board.getGameMode(), "Game mode should be 'General' when General is selected.");
+        assertEquals("General", game.getGameMode(), "Game mode should be 'General' when General is selected.");
     }
 
     // AC 2.2 <Only select one game mode>
@@ -189,9 +191,9 @@ class GUITests {
     @Test
     void testNewGameClearsBoardAndSetsBlueTurn() throws Exception {
         // Prepopulate the board by making a move at (0,0).
-        board.makeMove(0, 0, true);  // Blue move; cell becomes 1 and turn becomes Red.
-        assertNotEquals(0, board.getCell(0, 0), "Cell (0,0) should be non-zero before new game.");
-        assertEquals("Red", board.getTurn(), "Turn should be Red after the move.");
+        game.makeMove(0, 0, true);  // Blue move; cell becomes 1 and turn becomes Red.
+        assertNotEquals(0, game.getCell(0, 0), "Cell (0,0) should be non-zero before new game.");
+        assertEquals("Red", game.getTurn(), "Turn should be Red after the move.");
 
         // Simulate a new game: set a valid board size and click "Start Game!".
         Field boardSizeInputField = GUI.class.getDeclaredField("boardSizeInput");
@@ -204,11 +206,12 @@ class GUITests {
         JButton startGameButton = (JButton) startGameButtonField.get(gui);
         SwingUtilities.invokeAndWait(startGameButton::doClick);
 
+        game = gui.getGame();
         // Verify that the board is cleared and turn is reset to Blue.
-        assertEquals("Blue", board.getTurn(), "Turn should reset to Blue after new game.");
-        for (int row = 0; row < board.getBoardSize(); row++) {
-            for (int col = 0; col < board.getBoardSize(); col++) {
-                assertEquals(0, board.getCell(row, col), "Board should be cleared on new game.");
+        assertEquals("Blue", game.getTurn(), "Turn should reset to Blue after new game.");
+        for (int row = 0; row < game.getBoardSize(); row++) {
+            for (int col = 0; col < game.getBoardSize(); col++) {
+                assertEquals(0, game.getCell(row, col), "Board should be cleared on new game.");
             }
         }
     }
@@ -233,9 +236,11 @@ class GUITests {
         JButton startGameButton = (JButton) startGameButtonField.get(gui);
         SwingUtilities.invokeAndWait(startGameButton::doClick);
 
+        game = gui.getGame();
+
         // Verify board size and game mode.
-        assertEquals(12, board.getBoardSize(), "Board size should be updated to 12.");
-        assertEquals("General", board.getGameMode(), "Game mode should be set to General.");
+        assertEquals(12, game.getBoardSize(), "Board size should be updated to 12.");
+        assertEquals("General", game.getGameMode(), "Game mode should be set to General.");
     }
 
     // AC 4.1 <Simple move selection>
@@ -282,9 +287,9 @@ class GUITests {
         SwingUtilities.invokeAndWait(() -> gameBoardCanvas.dispatchEvent(clickEvent));
 
         // Verify that cell (0,0) now contains an 'S' (represented by 1).
-        assertEquals(1, board.getCell(0, 0), "Vacant square should now contain an 'S' (1) after move.");
+        assertEquals(1, game.getCell(0, 0), "Vacant square should now contain an 'S' (1) after move.");
         // And the turn should switch to Red.
-        assertEquals("Red", board.getTurn(), "Turn should switch to Red after Blue's move.");
+        assertEquals("Red", game.getTurn(), "Turn should switch to Red after Blue's move.");
     }
 
     // AC 4.3 <Simple Move Placement occupied square>
@@ -305,10 +310,10 @@ class GUITests {
         MouseEvent clickEvent1 = new MouseEvent(gameBoardCanvas, MouseEvent.MOUSE_CLICKED,
                 System.currentTimeMillis(), 0, 20, 20, 1, false);
         SwingUtilities.invokeAndWait(() -> gameBoardCanvas.dispatchEvent(clickEvent1));
-        int cellValueAfterFirstMove = board.getCell(0, 0);
+        int cellValueAfterFirstMove = game.getCell(0, 0);
         assertEquals(1, cellValueAfterFirstMove, "First move: cell (0,0) should contain 1.");
         // Turn should now be Red.
-        assertEquals("Red", board.getTurn(), "After Blue's move, turn should be Red.");
+        assertEquals("Red", game.getTurn(), "After Blue's move, turn should be Red.");
 
         // Now, simulate a second click on the same occupied square (cell (0,0)) as Red.
         MouseEvent clickEvent2 = new MouseEvent(gameBoardCanvas, MouseEvent.MOUSE_CLICKED,
@@ -316,10 +321,58 @@ class GUITests {
         SwingUtilities.invokeAndWait(() -> gameBoardCanvas.dispatchEvent(clickEvent2));
 
         // Since the square is occupied, the value should remain unchanged.
-        assertEquals(cellValueAfterFirstMove, board.getCell(0, 0),
+        assertEquals(cellValueAfterFirstMove, game.getCell(0, 0),
                 "Occupied square should remain unchanged after an invalid move.");
         // And the turn should remain Red because the move was not accepted.
-        assertEquals("Red", board.getTurn(), "Turn should remain Red after attempting move on an occupied square.");
+        assertEquals("Red", game.getTurn(), "Turn should remain Red after attempting move on an occupied square.");
     }
+
+    // AC 5.2 Given an ongoing simple game,
+    //When a “red” or “blue” player completes an SOS and that SOS is marked
+    //Then a dialog will declare the winner, and set the game state to inactive.
+    @Test
+    void testSimpleGameOver() throws Exception {
+
+        game.makeMove(0, 0, true);  // Blue move; cell becomes 1 and turn becomes Red.
+        game.makeMove(0, 1, false);
+        game.makeMove(0, 2, true);
+
+        // Game should not be active
+        assertNotEquals(game.getGameState(), GameState.ACTIVE,
+                "Game should be over, game state NOT be active");
+    }
+
+    // AC 7.1 <General game completion detection>
+    @Test
+    void testGeneralGameOver() throws Exception {
+        // Set board size input to 3
+        Field boardSizeInputField = GUI.class.getDeclaredField("boardSizeInput");
+        boardSizeInputField.setAccessible(true);
+        JTextField boardSizeInput = (JTextField) boardSizeInputField.get(gui);
+        SwingUtilities.invokeAndWait(() -> boardSizeInput.setText("3"));
+
+        // Simulate clicking the "Start Game!" button.
+        Field startGameButtonField = GUI.class.getDeclaredField("startGameButton");
+        startGameButtonField.setAccessible(true);
+        JButton startGameButton = (JButton) startGameButtonField.get(gui);
+        SwingUtilities.invokeAndWait(startGameButton::doClick);
+
+        game = gui.getGame();
+
+        game.makeMove(0, 0, true);  // Blue move; cell becomes 1 and turn becomes Red.
+        game.makeMove(0, 1, false);
+        game.makeMove(0, 2, true);
+        game.makeMove(1, 0, true);
+        game.makeMove(1, 1, false);
+        game.makeMove(1, 2, true);
+        game.makeMove(2, 0, true);
+        game.makeMove(2, 1, false);
+        game.makeMove(2, 2, true);
+
+        // Game should not be active
+        assertNotEquals(game.getGameState(), GameState.ACTIVE,
+                "Game should be over, game state NOT be active");
+    }
+
 }
 
